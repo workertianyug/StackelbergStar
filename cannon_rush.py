@@ -57,6 +57,7 @@ class CannonRushBot(sc2.BotAI):
                 await self.build(building, near=pos)
 
 
+        print(self.enemy_structures)
        
 
 # def main():
@@ -73,7 +74,74 @@ def main():
         realtime=True,
     )
 
+# def main():
+#     sc2.run_game(
+#         sc2.maps.get("(2)CatalystLE"),
+#         [Bot(Race.Protoss, CannonRushBot(), name="CheeseCannon"),Human(Race.Terran)],
+#         realtime=True,
+#     )
+
 
 
 if __name__ == "__main__":
     main()
+
+
+
+"""
+Plan: 
+
+Sat:
+1. write a BotAI class
+
+2. LP stackelberg solver
+
+3. Scouting
+
+4. Expert voting algorithm
+
+Sun:
+5. target list & timing list (expand a lot)
+
+"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
