@@ -94,9 +94,9 @@ Plan:
 Sat:
 1. write a BotAI class
 
-2. LP stackelberg solver
+2. Scouting
 
-3. Scouting
+3. LP stackelberg solver
 
 4. Expert voting algorithm
 
