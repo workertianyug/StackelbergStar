@@ -5,12 +5,18 @@ from sc2 import Race, Difficulty
 from sc2.constants import *
 from sc2.player import Bot, Computer, Human
 
+import numpy as np
 
+# 0
 gatewayPush = [[(NEXUS,2),(GATEWAY,3), (CYBERNETICSCORE,1)],
                [(ZEALOT,3, GATEWAY), (STALKER,3, GATEWAY)]]
 
+# 1
 roboPush = [[(NEXUS,2),(GATEWAY,2), (CYBERNETICSCORE,1), (ROBOTICSFACILITY,2)],
             [(ZEALOT,3,GATEWAY),(STALKER,3,GATEWAY),(IMMORTAL,3,ROBOTICSFACILITY)]]
+
+betterRoboPush = [[(GATEWAY,2), (CYBERNETICSCORE,1), (ROBOTICSFACILITY,1)],
+            [(STALKER,4,GATEWAY),(IMMORTAL,2,ROBOTICSFACILITY)]]
 
 class StackelbergBot(sc2.BotAI):
 
@@ -22,28 +28,47 @@ class StackelbergBot(sc2.BotAI):
         self.scouts_and_spots = {}
         self.numPatrolWorkerIDs = []
 
-        # weights for expert voting
+        # strategy for StackelbergBot
+        self.stackelbergStrats = [gatewayPush, betterRoboPush]
 
-        self.EGVR = 1
-        self.EGVI = 1
-        self.LAII = 1
-        self.MGVI = 1
-        self.LGVI = 1
-        self.MGVR = 1
-        self.MGII = 1
-        self.LGII = 1
-        self.LGVR = 1
-        self.LGVI = 1
-        self.MGIR = 1
-        self.LGIR = 1
+        self.stackelbergStratsName = ["gatewayPush", "roboPush"]
 
-        self.earlyStrat = [self.EGVR, self.EGVI]
-        self.midStrat = [self.MGVI, self.MGVR, self.MGII, self.MGIR]
-        self.lateStrat = [self.LAII, self.LGVI, self.LGII, self.LGVR, self.LGVI, self.LGIR]
+        # initial weights for expert voting
+        self.EGVR = 1 # 0
+        self.EGVI = 1 # 1
+        self.LAII = 1 # 2
+        self.MGVI = 1 # 3
+        self.LGVI = 1 # 4
+        self.MGVR = 1 # 5
+        self.MGII = 1 # 6
+        self.LGII = 1 # 7
+        self.LGVR = 1 # 8
+        self.LGVI = 1 # 9
+        self.MGIR = 1 # 10
+        self.LGIR = 1 # 11
+        # put into numpy ary for computation
+        self.weights_ary = np.array([self.EGVR, self.EGVI, self.LAII, self.MGVI, self.LGVI, self.MGVR,
+                                     self.MGII, self.LGII, self.LGVR, self.LGVI, self.MGIR, self.LGIR])
+        self.prob_ary = self.weights_ary / np.sum(self.weights_ary)
 
-        self.groundStrat = [self.EGVR, self.EGVI, self.MGVI, self.MGVR, self.MGII,
-                            self.LGII, self.LGVR, self.LGVI, self.LGIR]
-        self.airStrat = [self.LAII]
+        # now need to define utility matrix (need to ensure has same number of columns as weights_ary)
+
+
+        self.util_matrix = np.array(
+            # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+            [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], # 0 
+             [10,1, 5, 5, 5, 7, 1, 7, 7, 3, 1, 1]] # 1  
+        )
+
+
+
+        # self.earlyStrat = [self.EGVR, self.EGVI]
+        # self.midStrat = [self.MGVI, self.MGVR, self.MGII, self.MGIR]
+        # self.lateStrat = [self.LAII, self.LGVI, self.LGII, self.LGVR, self.LGVI, self.LGIR]
+
+        # self.groundStrat = [self.EGVR, self.EGVI, self.MGVI, self.MGVR, self.MGII,
+        #                     self.LGII, self.LGVR, self.LGVI, self.LGIR]
+        # self.airStrat = [self.LAII]
 
         # not sure if need the other two categories, maybe these two are enough
 
@@ -53,7 +78,8 @@ class StackelbergBot(sc2.BotAI):
 
     async def on_step(self, iteration):
 
-        game_plan = self.getGamePlan()
+        await self.expert_voting(iteration)
+        game_plan = self.getGamePlan(iteration) # get the game plan to execute
         await self.distribute_workers()
         await self.build_workers()
         await self.build_pylons()
@@ -61,7 +87,7 @@ class StackelbergBot(sc2.BotAI):
         await self.worker_scout()
         await self.observer_scout()
         await self.execute_plan(game_plan)
-        await self.expert_voting(iteration)
+        
 
 
     async def build_workers(self):
@@ -196,7 +222,7 @@ class StackelbergBot(sc2.BotAI):
 
         if self.enemy_structures(STARGATE):
             self.LAII *= (1+eps)
-            self.MAII *= (1+eps)
+            # self.MAVI *= (1+eps)
 
         if self.enemy_structures(TWILIGHTCOUNCIL):
             self.MGVR *= (1+eps)
@@ -217,14 +243,32 @@ class StackelbergBot(sc2.BotAI):
             self.LGIR *= (1+eps)
 
 
-    def getGamePlan(self):
+    def getGamePlan(self, iteration):
 
         # solve the game matrix return a game plan
         # for opponent's probability use weights
 
         # just get the max out of all the probabilities?
-        
-        return roboPush
+
+        self.weights_ary = np.array([self.EGVR, self.EGVI, self.LAII, self.MGVI, self.LGVI, self.MGVR,
+                                     self.MGII, self.LGII, self.LGVR, self.LGVI, self.MGIR, self.LGIR])
+        self.prob_ary = self.weights_ary / np.sum(self.weights_ary)
+
+        best_i = 0
+        best_util = -1
+
+        for i in range(len(self.stackelbergStrats)):
+            cur_row = self.util_matrix[i]
+            cur_util = np.dot(cur_row, self.prob_ary)
+
+            if cur_util > best_util:
+                best_util = cur_util
+                best_i = i
+
+        if iteration % 80 == 0:
+            print("curstrat: ", self.stackelbergStratsName[best_i])
+
+        return self.stackelbergStrats[best_i]
 
 
 
@@ -246,7 +290,7 @@ class StackelbergBot(sc2.BotAI):
 def main():
     sc2.run_game(
         sc2.maps.get("(2)CatalystLE"),
-        [Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot"), Computer(Race.Protoss, Difficulty.Easy)],
+        [Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot"), Computer(Race.Protoss, Difficulty.Medium)],
         realtime=False,
     )
 
