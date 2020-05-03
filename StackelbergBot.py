@@ -22,6 +22,32 @@ class StackelbergBot(sc2.BotAI):
         self.scouts_and_spots = {}
         self.numPatrolWorkerIDs = []
 
+        # weights for expert voting
+
+        self.EGVR = 1
+        self.EGVI = 1
+        self.LAII = 1
+        self.MGVI = 1
+        self.LGVI = 1
+        self.MGVR = 1
+        self.MGII = 1
+        self.LGII = 1
+        self.LGVR = 1
+        self.LGVI = 1
+        self.MGIR = 1
+        self.LGIR = 1
+
+        self.earlyStrat = [self.EGVR, self.EGVI]
+        self.midStrat = [self.MGVI, self.MGVR, self.MGII, self.MGIR]
+        self.lateStrat = [self.LAII, self.LGVI, self.LGII, self.LGVR, self.LGVI, self.LGIR]
+
+        self.groundStrat = [self.EGVR, self.EGVI, self.MGVI, self.MGVR, self.MGII,
+                            self.LGII, self.LGVR, self.LGVI, self.LGIR]
+        self.airStrat = [self.LAII]
+
+        # not sure if need the other two categories, maybe these two are enough
+
+
 
     async def on_step(self, iteration):
 
@@ -32,6 +58,7 @@ class StackelbergBot(sc2.BotAI):
         await self.worker_scout()
         await self.observer_scout()
         await self.execute_plan(roboPush)
+        await self.expert_voting(iteration)
 
 
     async def build_workers(self):
@@ -61,7 +88,8 @@ class StackelbergBot(sc2.BotAI):
                 if worker is None:
                     break
                 if not self.structures(ASSIMILATOR).closer_than(1.0, vaspene).exists:
-                    self.do(worker.build(ASSIMILATOR, vaspene), subtract_cost=True)
+                    if self.units(PROBE).amount >= 15 and self.structures(GATEWAY).amount>0:
+                        self.do(worker.build(ASSIMILATOR, vaspene), subtract_cost=True)
 
     async def worker_scout(self):
 
@@ -139,21 +167,56 @@ class StackelbergBot(sc2.BotAI):
                     self.do(u.attack(self.enemy_start_locations[0]))
 
 
+    async def expert_voting(self, iteration):
+        # roughly every 30 seconds in game
+        if iteration % 80 != 0:
+            return
+
+        print(iteration)
+        eps = 0.1
+        print(self.enemy_structures)
+        if self.enemy_structures(GATEWAY).amount > 2 and self.units(PROBE).amount < 22:
+            self.EGVI *= (1+eps)
+
+        if self.enemy_structures(FORGE).amount > 0 and self.units(PROBE).amount < 22:
+            self.EGVI *= (1+eps)
+
+        if self.enemy_structures(ROBOTICSFACILITY).amount > 0:
+            self.MGVI *= (1+eps)
+            self.LGVI *= (1+eps)
 
 
-# def main():
-#     sc2.run_game(
-#         sc2.maps.get("(2)CatalystLE"),
-#         [Human(Race.Terran),Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot")],
-#         realtime=False,
-#     )
+    async def getGamePlan(self):
+
+        # solve the game matrix return a game plan
+        # for opponent's probability use weights
+
+        # just get the max out of all the probabilities?
+        pass
+
+
+
+
+
+
+
+
+
+
 
 def main():
     sc2.run_game(
         sc2.maps.get("(2)CatalystLE"),
-        [Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot"), Computer(Race.Protoss, Difficulty.Medium)],
-        realtime=False,
+        [Human(Race.Protoss),Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot")],
+        realtime=True,
     )
+
+# def main():
+#     sc2.run_game(
+#         sc2.maps.get("(2)CatalystLE"),
+#         [Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot"), Computer(Race.Protoss, Difficulty.Easy)],
+#         realtime=True,
+#     )
 
 if __name__ == "__main__":
     main()
@@ -178,7 +241,7 @@ if __name__ == "__main__":
 
 # use enemy scouting info
 
-
+# how to make units defend? can have all army units gather at natural (need to keep track of all army)
 
 
 
