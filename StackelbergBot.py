@@ -53,13 +53,14 @@ class StackelbergBot(sc2.BotAI):
 
     async def on_step(self, iteration):
 
+        game_plan = self.getGamePlan()
         await self.distribute_workers()
         await self.build_workers()
         await self.build_pylons()
         await self.build_assimilators()
         await self.worker_scout()
         await self.observer_scout()
-        await self.execute_plan(roboPush)
+        await self.execute_plan(game_plan)
         await self.expert_voting(iteration)
 
 
@@ -216,13 +217,14 @@ class StackelbergBot(sc2.BotAI):
             self.LGIR *= (1+eps)
 
 
-    async def getGamePlan(self):
+    def getGamePlan(self):
 
         # solve the game matrix return a game plan
         # for opponent's probability use weights
 
         # just get the max out of all the probabilities?
-        pass
+        
+        return roboPush
 
 
 
