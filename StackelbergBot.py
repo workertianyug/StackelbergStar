@@ -47,6 +47,8 @@ class StackelbergBot(sc2.BotAI):
 
         # not sure if need the other two categories, maybe these two are enough
 
+       
+        self.naturalPos = self.get_next_expansion()
 
 
     async def on_step(self, iteration):
@@ -154,7 +156,7 @@ class StackelbergBot(sc2.BotAI):
                 if (self.can_afford(cur_unit) and
                     (self.units(cur_unit).amount + self.already_pending(cur_unit)) < num):
                     self.do(p.train(cur_unit), subtract_cost=True, subtract_supply=True)
-
+                    
 
         # if army prep is complete -> attack
         canAttack = True
@@ -165,6 +167,12 @@ class StackelbergBot(sc2.BotAI):
             for (cur_unit, num, production) in unit_plan:
                 for u in self.units(cur_unit):
                     self.do(u.attack(self.enemy_start_locations[0]))
+        # todo: how to move around units
+        # else:
+        #     # gather at natural expansion
+        #     for a in self.units:
+        #         if a.type_id != PROBE and a.is_idle:
+        #             self.do(a.move(self.expand_dis_dir[self.ordered_exp_distances[-2]]))
 
 
     async def expert_voting(self, iteration):
@@ -185,6 +193,28 @@ class StackelbergBot(sc2.BotAI):
             self.MGVI *= (1+eps)
             self.LGVI *= (1+eps)
 
+        if self.enemy_structures(STARGATE):
+            self.LAII *= (1+eps)
+            self.MAII *= (1+eps)
+
+        if self.enemy_structures(TWILIGHTCOUNCIL):
+            self.MGVR *= (1+eps)
+            self.MGIR *= (1+eps)
+            self.LGVR *= (1+eps)
+
+        if self.enemy_structures(ROBOTICSBAY):
+            self.LGVI *= (1+eps)
+
+        if self.enemy_structures(TEMPLARARCHIVE):
+            self.LGVR *= (1+eps)
+
+        if self.enemy_structures(FLEETBEACON):
+            self.LAII *= (1+eps)
+
+        if self.enemy_structures(DARKSHRINE):
+            self.MGIR *= (1+eps)
+            self.LGIR *= (1+eps)
+
 
     async def getGamePlan(self):
 
@@ -204,19 +234,19 @@ class StackelbergBot(sc2.BotAI):
 
 
 
-def main():
-    sc2.run_game(
-        sc2.maps.get("(2)CatalystLE"),
-        [Human(Race.Protoss),Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot")],
-        realtime=True,
-    )
-
 # def main():
 #     sc2.run_game(
 #         sc2.maps.get("(2)CatalystLE"),
-#         [Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot"), Computer(Race.Protoss, Difficulty.Easy)],
+#         [Human(Race.Protoss),Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot")],
 #         realtime=True,
 #     )
+
+def main():
+    sc2.run_game(
+        sc2.maps.get("(2)CatalystLE"),
+        [Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot"), Computer(Race.Protoss, Difficulty.Easy)],
+        realtime=False,
+    )
 
 if __name__ == "__main__":
     main()
