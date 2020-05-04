@@ -22,7 +22,9 @@ earlyStalkerPush = [[(NEXUS,1,0), (NEXUS,2,20), (GATEWAY,1,14), (GATEWAY,4,30), 
                     [(ZEALOT,2,GATEWAY, 15), (ZEALOT,4,GATEWAY,30), (STALKER,10,GATEWAY,30)]]
 # 3
 lateRoboPush = [[(NEXUS,1,0), (NEXUS,2,20), (NEXUS,3,40),(GATEWAY,1,14), (GATEWAY,3,22),(GATEWAY,8,50), (CYBERNETICSCORE,1,14), (ROBOTICSFACILITY,1,22),(ROBOTICSFACILITY,2,30), (ROBOTICSBAY,1,22)], 
-                [(ZEALOT,2, GATEWAY,15), (ZEALOT,15,GATEWAY,50), (STALKER,2,GATEWAY,15), (STALKER,10,GATEWAY,50), (IMMORTAL,6,ROBOTICSFACILITY,30), (COLOSSUS,2,ROBOTICSFACILITY,40)]]
+                [(ZEALOT,2, GATEWAY,15), (ZEALOT,15,GATEWAY,50), (STALKER,4,GATEWAY,15), (STALKER,10,GATEWAY,50), (IMMORTAL,6,ROBOTICSFACILITY,45), (COLOSSUS,2,ROBOTICSFACILITY,40)]]
+
+
 
 class StackelbergBot(sc2.BotAI):
 
@@ -115,7 +117,7 @@ class StackelbergBot(sc2.BotAI):
             num = 15
         else:
             num = 5
-            
+
         if self.supply_left < num and not self.already_pending(PYLON):
             nexuses = self.structures(NEXUS).ready
             if nexuses.exists:
@@ -322,7 +324,7 @@ class StackelbergBot(sc2.BotAI):
 def main():
     sc2.run_game(
         sc2.maps.get("(2)CatalystLE"),
-        [Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot"), Computer(Race.Protoss, Difficulty.Medium)],
+        [Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot"), Computer(Race.Protoss, Difficulty.Easy)],
         realtime=False,
     )
 
@@ -333,7 +335,6 @@ if __name__ == "__main__":
 
      
 
-# how to make units defend? can have all army units gather at natural (need to keep track of all army)
 
 # modify utility matrix to favor late game strat if time moves on
 
