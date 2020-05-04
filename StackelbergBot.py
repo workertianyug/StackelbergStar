@@ -15,16 +15,23 @@ gatewayPush = [[(NEXUS, 1, 0),(GATEWAY,3, 0), (CYBERNETICSCORE,1, 0)],
 roboPush = [[(NEXUS,1,0), (NEXUS,2,20), (GATEWAY,1,14), (GATEWAY,2,22),(CYBERNETICSCORE,1,0), (ROBOTICSFACILITY,1,22),(ROBOTICSFACILITY,2,30)],
             [(ZEALOT,3,GATEWAY,15),(STALKER,3,GATEWAY,15),(IMMORTAL,3,ROBOTICSFACILITY,15)]]
 # 1
-earlyRoboPush = [[(NEXUS,1,0), (NEXUS,2,20), (GATEWAY,1,14), (GATEWAY,2,22), (CYBERNETICSCORE,1,0), (ROBOTICSFACILITY,1,22)],
+earlyRoboPush = [[(NEXUS,1,0), (NEXUS,2,20), (GATEWAY,1,14), (GATEWAY,2,27), (CYBERNETICSCORE,1,0), (ROBOTICSFACILITY,1,22)],
                 [(ZEALOT,2,GATEWAY,15), (ZEALOT,4,GATEWAY,30), (IMMORTAL,3,ROBOTICSFACILITY, 22)]]
 # 2
 earlyStalkerPush = [[(NEXUS,1,0), (NEXUS,2,20), (GATEWAY,1,14), (GATEWAY,4,30), (CYBERNETICSCORE,1,14)], 
                     [(ZEALOT,2,GATEWAY, 15), (ZEALOT,4,GATEWAY,30), (STALKER,10,GATEWAY,30)]]
 # 3
-lateRoboPush = [[(NEXUS,1,0), (NEXUS,2,20), (NEXUS,3,40),(GATEWAY,1,14), (GATEWAY,3,22),(GATEWAY,8,50), (CYBERNETICSCORE,1,14), (ROBOTICSFACILITY,1,22),(ROBOTICSFACILITY,2,30), (ROBOTICSBAY,1,22)], 
+lateRoboPush = [[(NEXUS,1,0), (NEXUS,2,20), (NEXUS,3,40),(GATEWAY,1,14), (GATEWAY,3,30),(GATEWAY,8,50), (CYBERNETICSCORE,1,14), (ROBOTICSFACILITY,1,22),(ROBOTICSFACILITY,2,30), (ROBOTICSBAY,1,22)], 
                 [(ZEALOT,2, GATEWAY,15), (ZEALOT,15,GATEWAY,50), (STALKER,4,GATEWAY,15), (STALKER,10,GATEWAY,50), (IMMORTAL,6,ROBOTICSFACILITY,45), (COLOSSUS,2,ROBOTICSFACILITY,40)]]
 
+# 4
+midStalkerAllin = [[(NEXUS,1,0), (NEXUS,2,20), (NEXUS,3,40), (GATEWAY,1,14), (GATEWAY,3,30), (GATEWAY,8,50), (CYBERNETICSCORE,1,14), (ROBOTICSFACILITY,1,22)],
+                   [(ZEALOT,1, GATEWAY,15), (STALKER,15, GATEWAY,30)] 
+                  ]
 
+# 5
+skyTossPush = [[(NEXUS,1,0), (NEXUS,2,20), (NEXUS,3,40), (GATEWAY,1,14), (GATEWAY,2,30), (CYBERNETICSCORE,1,14), (STARGATE,1,14), (STARGATE,3,40), (FLEETBEACON,1,14)],
+              [(ZEALOT,1,GATEWAY,15), (STALKER,3,GATEWAY,30), (VOIDRAY,6,STARGATE,40), (CARRIER,6,STARGATE,40)]]
 
 class StackelbergBot(sc2.BotAI):
 
@@ -37,9 +44,9 @@ class StackelbergBot(sc2.BotAI):
         self.numPatrolWorkerIDs = []
 
         # strategy for StackelbergBot
-        self.stackelbergStrats = [gatewayPush, earlyRoboPush, earlyStalkerPush, lateRoboPush]
+        self.stackelbergStrats = [gatewayPush, earlyRoboPush, earlyStalkerPush, lateRoboPush, midStalkerAllin, skyTossPush]
 
-        self.stackelbergStratsName = ["gatewayPush", "earlyRoboPush", "earlyStalkerPush", "lateRoboPush"]
+        self.stackelbergStratsName = ["gatewayPush", "earlyRoboPush", "earlyStalkerPush", "lateRoboPush", "midStalkerAllin", "skyTossPush"]
 
         self.knownEnemyStructures = set()
 
@@ -69,7 +76,9 @@ class StackelbergBot(sc2.BotAI):
             [[10,10,1, 1, 1, 5, 1, 1, 1, 1, 1, 1], # 0 
              [10,1, 5, 5, 5, 7, 1, 7, 7, 3, 1, 1], # 1  
              [1, 1, 15,1, 1, 1, 1, 1, 1, 1, 1, 1], # 2
-             [1, 1, 1, 5, 5, 5, 5, 5, 5, 5, 5, 5] # 3
+             [1, 1, 1, 5, 5, 5, 5, 5, 5, 5, 5, 5], # 3
+             [1, 1, 1, 5, 5, 5, 5, 5, 5, 5, 5, 5], # 4
+             [1, 1, 1, 5, 5, 5, 5, 5, 5, 5, 5, 5]
             ]
         )
 
@@ -298,7 +307,8 @@ class StackelbergBot(sc2.BotAI):
                 best_util = cur_util
                 best_i = i
 
-        best_i = 3
+        # ty: hardcode to test one strat
+        best_i = 5
         if iteration % 80 == 0:
             print("curstrat: ", self.stackelbergStratsName[best_i])
 
@@ -324,7 +334,7 @@ class StackelbergBot(sc2.BotAI):
 def main():
     sc2.run_game(
         sc2.maps.get("(2)CatalystLE"),
-        [Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot"), Computer(Race.Protoss, Difficulty.Easy)],
+        [Bot(Race.Protoss, StackelbergBot(), name="StackelbergBot"), Computer(Race.Protoss, Difficulty.Medium)],
         realtime=False,
     )
 
