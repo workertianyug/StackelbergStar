@@ -8,15 +8,21 @@ from sc2.player import Bot, Computer, Human
 import numpy as np
 
 # 0
-gatewayPush = [[(NEXUS,2),(GATEWAY,3), (CYBERNETICSCORE,1)],
-               [(ZEALOT,3, GATEWAY), (STALKER,3, GATEWAY)]]
+gatewayPush = [[(NEXUS, 1, 0),(GATEWAY,3, 0), (CYBERNETICSCORE,1, 0)],
+               [(ZEALOT,3, GATEWAY, 0), (STALKER,3, GATEWAY, 0)]]
 
+
+roboPush = [[(NEXUS,1,0), (NEXUS,2,20), (GATEWAY,1,14), (GATEWAY,2,22),(CYBERNETICSCORE,1,0), (ROBOTICSFACILITY,1,22),(ROBOTICSFACILITY,2,30)],
+            [(ZEALOT,3,GATEWAY,15),(STALKER,3,GATEWAY,15),(IMMORTAL,3,ROBOTICSFACILITY,15)]]
 # 1
-roboPush = [[(NEXUS,2),(GATEWAY,2), (CYBERNETICSCORE,1), (ROBOTICSFACILITY,2)],
-            [(ZEALOT,3,GATEWAY),(STALKER,3,GATEWAY),(IMMORTAL,3,ROBOTICSFACILITY)]]
-
-betterRoboPush = [[(GATEWAY,2), (CYBERNETICSCORE,1), (ROBOTICSFACILITY,1)],
-            [(STALKER,4,GATEWAY),(IMMORTAL,2,ROBOTICSFACILITY)]]
+earlyRoboPush = [[(NEXUS,1,0), (NEXUS,2,20), (GATEWAY,1,14), (GATEWAY,2,22), (CYBERNETICSCORE,1,0), (ROBOTICSFACILITY,1,22)],
+                [(ZEALOT,2,GATEWAY,15), (ZEALOT,4,GATEWAY,30), (IMMORTAL,3,ROBOTICSFACILITY, 22)]]
+# 2
+earlyStalkerPush = [[(NEXUS,1,0), (NEXUS,2,20), (GATEWAY,1,14), (GATEWAY,4,30), (CYBERNETICSCORE,1,14)], 
+                    [(ZEALOT,2,GATEWAY, 15), (ZEALOT,4,GATEWAY,30), (STALKER,10,GATEWAY,30)]]
+# 3
+lateRoboPush = [[(NEXUS,1,0), (NEXUS,2,20), (NEXUS,3,40),(GATEWAY,1,14), (GATEWAY,3,22),(GATEWAY,8,50), (CYBERNETICSCORE,1,14), (ROBOTICSFACILITY,1,22),(ROBOTICSFACILITY,2,30), (ROBOTICSBAY,1,22)], 
+                [(ZEALOT,2, GATEWAY,15), (ZEALOT,15,GATEWAY,50), (STALKER,2,GATEWAY,15), (STALKER,10,GATEWAY,50), (IMMORTAL,6,ROBOTICSFACILITY,30), (COLOSSUS,2,ROBOTICSFACILITY,40)]]
 
 class StackelbergBot(sc2.BotAI):
 
@@ -29,9 +35,11 @@ class StackelbergBot(sc2.BotAI):
         self.numPatrolWorkerIDs = []
 
         # strategy for StackelbergBot
-        self.stackelbergStrats = [gatewayPush, betterRoboPush]
+        self.stackelbergStrats = [gatewayPush, earlyRoboPush, earlyStalkerPush, lateRoboPush]
 
-        self.stackelbergStratsName = ["gatewayPush", "roboPush"]
+        self.stackelbergStratsName = ["gatewayPush", "earlyRoboPush", "earlyStalkerPush", "lateRoboPush"]
+
+        self.knownEnemyStructures = set()
 
         # initial weights for expert voting
         self.EGVR = 1 # 0
@@ -56,8 +64,11 @@ class StackelbergBot(sc2.BotAI):
 
         self.util_matrix = np.array(
             # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
-            [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], # 0 
-             [10,1, 5, 5, 5, 7, 1, 7, 7, 3, 1, 1]] # 1  
+            [[10,10,1, 1, 1, 5, 1, 1, 1, 1, 1, 1], # 0 
+             [10,1, 5, 5, 5, 7, 1, 7, 7, 3, 1, 1], # 1  
+             [1, 1, 15,1, 1, 1, 1, 1, 1, 1, 1, 1], # 2
+             [1, 1, 1, 5, 5, 5, 5, 5, 5, 5, 5, 5] # 3
+            ]
         )
 
 
@@ -82,7 +93,7 @@ class StackelbergBot(sc2.BotAI):
         game_plan = self.getGamePlan(iteration) # get the game plan to execute
         await self.distribute_workers()
         await self.build_workers()
-        await self.build_pylons()
+        await self.build_pylons(iteration)
         await self.build_assimilators()
         await self.worker_scout()
         await self.observer_scout()
@@ -98,9 +109,14 @@ class StackelbergBot(sc2.BotAI):
                 if self.can_afford(PROBE):
                     self.do(nexus.train(PROBE), subtract_cost=True, subtract_supply=True)
 
-    async def build_pylons(self):
-       
-        if self.supply_left < 5 and not self.already_pending(PYLON):
+    async def build_pylons(self, iteration):
+
+        if (iteration//160) >= 5:
+            num = 15
+        else:
+            num = 5
+            
+        if self.supply_left < num and not self.already_pending(PYLON):
             nexuses = self.structures(NEXUS).ready
             if nexuses.exists:
                 if self.can_afford(PYLON):
@@ -111,7 +127,7 @@ class StackelbergBot(sc2.BotAI):
         for nexus in self.structures(NEXUS).ready:
             vaspenes = self.vespene_geyser.closer_than(15.0, nexus)
             for vaspene in vaspenes:
-                if not self.can_afford(ASSIMILATOR):
+                if (not self.can_afford(ASSIMILATOR)) or (self.units(PROBE).amount<=15 and self.structures(ASSIMILATOR).amount >= 1):
                     break
                 worker = self.select_build_worker(vaspene.position)
                 if worker is None:
@@ -151,7 +167,7 @@ class StackelbergBot(sc2.BotAI):
         # only if there's a ROBO we do observer scout
         if self.structures(ROBOTICSFACILITY):
             for robo in self.structures(ROBOTICSFACILITY):
-                if (self.can_afford(OBSERVER)) and (self.units(OBSERVER).amount + self.already_pending(OBSERVER) < 3):
+                if (self.can_afford(OBSERVER)) and (self.units(OBSERVER).amount + self.already_pending(OBSERVER) < 1):
                     self.do(robo.train(OBSERVER), subtract_cost=True, subtract_supply=True)
 
         for obsr in self.units(OBSERVER):
@@ -166,18 +182,21 @@ class StackelbergBot(sc2.BotAI):
 
         [structure_plan, unit_plan] = game_plan
 
-        for (cur_structure, num) in structure_plan:
+        for (cur_structure, num, num_worker) in structure_plan:
             # question for later: how to prioritize cybercore(soln found: keep record of supply workers)
+            if self.units(PROBE).amount < num_worker:
+                continue
             if (cur_structure == NEXUS and
                 self.can_afford(NEXUS) and 
-                self.structures(NEXUS).amount < num):
+                (self.structures(NEXUS).amount + self.already_pending(NEXUS) < num)):
                 await self.expand_now()
             elif self.can_afford(cur_structure) and self.structures(cur_structure).amount < num:
                 await self.build(cur_structure, near=self.structures(PYLON).random)
 
 
-        for (cur_unit, num, production) in unit_plan:
- 
+        for (cur_unit, num, production, num_worker) in unit_plan:
+            if self.units(PROBE).amount < num_worker:
+                continue
             cur_productions = self.structures(production).ready.idle
             for p in cur_productions:
                 if (self.can_afford(cur_unit) and
@@ -187,19 +206,20 @@ class StackelbergBot(sc2.BotAI):
 
         # if army prep is complete -> attack
         canAttack = True
-        for (cur_unit, num, production) in unit_plan:
+        for (cur_unit, num, production, num_worker) in unit_plan:
             if self.units(cur_unit).amount < num:
                 canAttack = False
         if canAttack == True:
-            for (cur_unit, num, production) in unit_plan:
+            for (cur_unit, num, production, num_worker) in unit_plan:
                 for u in self.units(cur_unit):
                     self.do(u.attack(self.enemy_start_locations[0]))
         # todo: how to move around units
-        # else:
-        #     # gather at natural expansion
-        #     for a in self.units:
-        #         if a.type_id != PROBE and a.is_idle:
-        #             self.do(a.move(self.expand_dis_dir[self.ordered_exp_distances[-2]]))
+        else:
+            # gather at natural expansion
+            for a in self.units:
+                if a.type_id != PROBE and a.type_id != OBSERVER and a.is_idle:
+                    self.do(a.move(self.expand_dis_dir[self.ordered_exp_distances[-2]]))
+                    self.do(a.patrol(self.expand_dis_dir[self.ordered_exp_distances[-3]],queue=True))
 
 
     async def expert_voting(self, iteration):
@@ -210,37 +230,48 @@ class StackelbergBot(sc2.BotAI):
         print(iteration)
         eps = 0.1
         print(self.enemy_structures)
-        if self.enemy_structures(GATEWAY).amount > 2 and self.units(PROBE).amount < 22:
-            self.EGVI *= (1+eps)
+        if self.enemy_structures(GATEWAY).amount > 2 and self.units(PROBE).amount < 22 and (GATEWAY not in self.knownEnemyStructures):
+            self.EGVI *= (1+eps)**(iteration//80)
+            self.knownEnemyStructures.add(GATEWAY)
 
-        if self.enemy_structures(FORGE).amount > 0 and self.units(PROBE).amount < 22:
-            self.EGVI *= (1+eps)
+        if self.enemy_structures(FORGE).amount > 0 and self.units(PROBE).amount < 22 and (FORGE not in self.knownEnemyStructures):
+            self.EGVI *= (1+eps)**(iteration//80)
+            self.knownEnemyStructures.add(FORGE)
 
-        if self.enemy_structures(ROBOTICSFACILITY).amount > 0:
-            self.MGVI *= (1+eps)
-            self.LGVI *= (1+eps)
+        if self.enemy_structures(ROBOTICSFACILITY).amount > 0 and (ROBOTICSFACILITY not in self.knownEnemyStructures):
+            self.MGVI *= (1+eps)**(iteration//80)
+            self.LGVI *= (1+eps)**(iteration//80)
+            self.knownEnemyStructures.add(ROBOTICSFACILITY)
 
-        if self.enemy_structures(STARGATE):
-            self.LAII *= (1+eps)
-            # self.MAVI *= (1+eps)
+        if self.enemy_structures(STARGATE) and (STARGATE not in self.knownEnemyStructures):
+            self.LAII *= (1+eps)**(iteration//80)
+            # self.MAVI *= (1+eps)**(iteration//80)
+            self.knownEnemyStructures.add(STARGATE)
 
-        if self.enemy_structures(TWILIGHTCOUNCIL):
-            self.MGVR *= (1+eps)
-            self.MGIR *= (1+eps)
-            self.LGVR *= (1+eps)
+        if self.enemy_structures(TWILIGHTCOUNCIL) and (TWILIGHTCOUNCIL not in self.knownEnemyStructures):
+            self.MGVR *= (1+eps)**(iteration//80)
+            self.MGIR *= (1+eps)**(iteration//80)
+            self.LGVR *= (1+eps)**(iteration//80)
+            self.knownEnemyStructures.add(TWILIGHTCOUNCIL)
 
-        if self.enemy_structures(ROBOTICSBAY):
-            self.LGVI *= (1+eps)
+        if self.enemy_structures(ROBOTICSBAY) and (ROBOTICSBAY not in self.knownEnemyStructures):
+            self.LGVI *= (1+eps)**(iteration//80)
+            self.knownEnemyStructures.add(ROBOTICSBAY)
 
-        if self.enemy_structures(TEMPLARARCHIVE):
-            self.LGVR *= (1+eps)
+        if self.enemy_structures(TEMPLARARCHIVE) and (TEMPLARARCHIVE not in self.knownEnemyStructures):
+            self.LGVR *= (1+eps)**(iteration//80)
+            self.knownEnemyStructures.add(TEMPLARARCHIVE)
 
-        if self.enemy_structures(FLEETBEACON):
-            self.LAII *= (1+eps)
+        if self.enemy_structures(FLEETBEACON) and (FLEETBEACON not in self.knownEnemyStructures):
+            self.LAII *= (1+eps)**(iteration//80)
+            self.knownEnemyStructures.add(FLEETBEACON)
 
-        if self.enemy_structures(DARKSHRINE):
-            self.MGIR *= (1+eps)
-            self.LGIR *= (1+eps)
+        if self.enemy_structures(DARKSHRINE) and (DARKSHRINE not in self.knownEnemyStructures):
+            self.MGIR *= (1+eps)**(iteration//80)
+            self.LGIR *= (1+eps)**(iteration//80)
+            self.knownEnemyStructures.add(DARKSHRINE)
+
+        # if iteration is big enough, switch to late game strats
 
 
     def getGamePlan(self, iteration):
@@ -265,6 +296,7 @@ class StackelbergBot(sc2.BotAI):
                 best_util = cur_util
                 best_i = i
 
+        best_i = 3
         if iteration % 80 == 0:
             print("curstrat: ", self.stackelbergStratsName[best_i])
 
@@ -300,26 +332,10 @@ if __name__ == "__main__":
 
 
      
-# get function executeRoadMap (done)
-
-# take in dictionary of structures and units (done)
-
-# if fullfilled, attack (done)
-
-# dont' forget to expand -> could be included in the roadmap (done)
-
-# observer scout (done)
-
-
-# stackelberg solver
-
-# expert voting algo
-
-# use enemy scouting info
 
 # how to make units defend? can have all army units gather at natural (need to keep track of all army)
 
-
+# modify utility matrix to favor late game strat if time moves on
 
 
 
